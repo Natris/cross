@@ -1,0 +1,35 @@
+FROM debian:bullseye
+
+COPY common.sh lib.sh /
+RUN /common.sh
+
+COPY cmake.sh /
+RUN /cmake.sh
+
+COPY xargo.sh /
+RUN /xargo.sh
+
+
+
+RUN dpkg --add-architecture armhf && \
+    apt-get update && \
+    apt-get install -y libgstreamer1.0-dev:armhf libgstreamer-plugins-base1.0-dev:armhf libgstreamer-plugins-bad1.0-dev:armhf libssl-dev:armhf vim bzip2  wget xz-utils \
+    gstreamer1.0-plugins-ugly:armhf gstreamer1.0-libav:armhf libgstrtspserver-1.0-dev:armhf libges-1.0-dev:armhf
+
+RUN mkdir -p /opt && cd /opt && wget https://github.com/tttapa/docker-arm-cross-toolchain/releases/latest/download/x-tools-armv6-rpi-linux-gnueabihf.tar.bz2
+
+RUN cd /opt && tar -xJvf x-tools-armv6-rpi-linux-gnueabihf.tar.bz2 && rm x-tools-armv6-rpi-linux-gnueabihf.tar.bz2
+
+ENV PATH /opt/x-tools/armv6-rpi-linux-gnueabihf/bin:$PATH
+
+ENV CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_LINKER=armv6-rpi-linux-gnueabihf-gcc \
+    CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_RUNNER=qemu-arm \
+    CC_arm_unknown_linux_gnueabihf=armv6-rpi-linux-gnueabihf-gcc \
+    CXX_arm_unknown_linux_gnueabihf=armv6-rpi-linux-gnueabihf-g++ \
+    PKG_CONFIG_PATH=/usr/lib/arm-linux-gnueabihf/pkgconfig \
+    QEMU_LD_PREFIX=/opt/x-tools/armv6-rpi-linux-gnueabihf \
+    LD_LIBRARY_PATH=/opt/x-tools/armv6-rpi-linux-gnueabihf/armv6-rpi-linux-gnueabihf/lib:/opt/x-tools/armv6-rpi-linux-gnueabihf/lib:/usr/lib/arm-linux-gnueabihf:/lib/arm-linux-gnueabihf \
+    LIBRARY_PATH=/opt/x-tools/armv6-rpi-linux-gnueabihf/armv6-rpi-linux-gnueabihf/lib:/opt/x-tools/armv6-rpi-linux-gnueabihf/lib:/usr/lib/arm-linux-gnueabihf:/lib/arm-linux-gnueabihf \
+    RUSTFLAGS='-C link-args=-Wl,-rpath-link=/usr/lib/arm-linux-gnueabihf:/lib/arm-linux-gnueabihf' \
+    RUST_TEST_THREADS=1 \
+    CPATH=/opt/x-tools/armv6-rpi-linux-gnueabihf/include:/usr/include/arm-linux-gnueabihf
